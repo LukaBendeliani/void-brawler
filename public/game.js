@@ -17,12 +17,13 @@ let projectiles = [];
 let powerups = [];
 let arenaSize = 20000;
 let gameStarted = false;
+let initialized = false;
 
 let localPlayer = {
     x: 0,
     y: 0,
     rotation: 0,
-    speed: 10.0
+    speed: 5.0
 };
 
 const keys = {};
@@ -128,6 +129,7 @@ socket.on('init', (data) => {
     if (players[myId]) {
         localPlayer.x = players[myId].x;
         localPlayer.y = players[myId].y;
+        initialized = true;
     }
 });
 
@@ -142,7 +144,7 @@ socket.on('state', (data) => {
 
         // Update Stats UI
         if (statElements.damage) statElements.damage.innerText = (p.stats.damage / 10).toFixed(1);
-        if (statElements.speed) statElements.speed.innerText = (p.stats.speed / 10.0).toFixed(1);
+        if (statElements.speed) statElements.speed.innerText = (p.stats.speed / 5.0).toFixed(1);
         if (statElements.defense) statElements.defense.innerText = (1 / p.stats.defense).toFixed(1);
         if (statElements.attackSpeed) statElements.attackSpeed.innerText = p.stats.attackSpeed.toFixed(1);
         if (statElements.health) statElements.health.innerText = Math.ceil(p.health);
@@ -184,7 +186,7 @@ function updateLeaderboard() {
 }
 
 function update() {
-    if (!myId || !players[myId] || !gameStarted) return;
+    if (!myId || !players[myId] || !gameStarted || !initialized) return;
 
     let moveX = 0;
     let moveY = 0;

@@ -47,7 +47,7 @@ io.on('connection', (socket) => {
         killCount: 0,
         stats: {
             damage: 10,
-            speed: 10.0,
+            speed: 5.0,
             defense: 1, // Multiplier for damage taken (1 = normal)
             attackSpeed: 1, // Multiplier for fire rate (1 = 1 shot per 500ms)
             health: 100,
@@ -177,7 +177,7 @@ setInterval(() => {
         const oldMaxHealth = player.stats.maxHealth;
 
         // Reset base stats
-        player.stats.speed = 10.0;
+        player.stats.speed = 5.0;
         player.stats.attackSpeed = 1;
         player.stats.damage = 10;
         player.stats.defense = 1;
