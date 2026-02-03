@@ -193,22 +193,10 @@ function update() {
         moveX = mobileControls.moveX;
         moveY = mobileControls.moveY;
     } else {
-        if (keys['KeyW']) {
-            moveX += Math.cos(localPlayer.rotation);
-            moveY += Math.sin(localPlayer.rotation);
-        }
-        if (keys['KeyS']) {
-            moveX -= Math.cos(localPlayer.rotation);
-            moveY -= Math.sin(localPlayer.rotation);
-        }
-        if (keys['KeyA']) {
-            moveX += Math.cos(localPlayer.rotation - Math.PI / 2);
-            moveY += Math.sin(localPlayer.rotation - Math.PI / 2);
-        }
-        if (keys['KeyD']) {
-            moveX += Math.cos(localPlayer.rotation + Math.PI / 2);
-            moveY += Math.sin(localPlayer.rotation + Math.PI / 2);
-        }
+        if (keys['KeyW']) moveY -= 1;
+        if (keys['KeyS']) moveY += 1;
+        if (keys['KeyA']) moveX -= 1;
+        if (keys['KeyD']) moveX += 1;
     }
 
     if (moveX !== 0 || moveY !== 0) {
