@@ -62,13 +62,22 @@ function initJoysticks() {
         zone: leftJ,
         mode: 'static',
         position: { left: '50%', top: '50%' },
-        color: '#00f2ff'
+        color: '#00f2ff',
+        size: 120,
+        threshold: 0.1
     };
     joystickMove = nipplejs.create(optionsLeft);
     joystickMove.on('move', (evt, data) => {
+        if (!data.angle || !data.force) return;
+        
         const force = Math.min(data.force, 1);
-        mobileControls.moveX = Math.cos(data.angle.radians) * force;
-        mobileControls.moveY = Math.sin(data.angle.radians) * force;
+        const angle = data.angle.radians;
+        
+        // 8-way snapping (45 degree increments)
+        const snappedAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+        
+        mobileControls.moveX = Math.cos(snappedAngle) * force;
+        mobileControls.moveY = Math.sin(snappedAngle) * force;
     });
     joystickMove.on('end', () => {
         mobileControls.moveX = 0;
@@ -79,10 +88,13 @@ function initJoysticks() {
         zone: rightJ,
         mode: 'static',
         position: { left: '50%', top: '50%' },
-        color: '#ff3e3e'
+        color: '#ff3e3e',
+        size: 120,
+        threshold: 0.1
     };
     joystickShoot = nipplejs.create(optionsRight);
     joystickShoot.on('move', (evt, data) => {
+        if (!data.angle || !data.force) return;
         mobileControls.shootActive = true;
         mobileControls.shootRotation = data.angle.radians;
         localPlayer.rotation = data.angle.radians;

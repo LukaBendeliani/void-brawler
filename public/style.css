@@ -233,8 +233,8 @@ h1 {
 #joystick-left, #joystick-right {
     position: fixed;
     bottom: 40px;
-    width: 120px;
-    height: 120px;
+    width: 150px;
+    height: 150px;
     z-index: 100;
     pointer-events: auto;
     display: none; /* Hidden by default, shown via JS on touch devices */
