@@ -15,7 +15,7 @@ let myId = null;
 let players = {};
 let projectiles = [];
 let powerups = [];
-let arenaSize = 10000;
+let arenaSize = 20000;
 let gameStarted = false;
 
 let localPlayer = {
@@ -27,6 +27,14 @@ let localPlayer = {
 
 const keys = {};
 let mouseDown = false;
+let joystickMove = null;
+let joystickShoot = null;
+let mobileControls = {
+    moveX: 0,
+    moveY: 0,
+    shootActive: false,
+    shootRotation: 0
+};
 
 const statElements = {
     damage: document.getElementById('stat-damage'),
@@ -37,17 +45,58 @@ const statElements = {
     size: document.getElementById('stat-size')
 };
 
+// Check for touch support
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+function initJoysticks() {
+    if (!isTouchDevice) return;
+
+    const optionsLeft = {
+        zone: document.getElementById('joystick-left'),
+        mode: 'static',
+        position: { left: '50%', top: '50%' },
+        color: '#00f2ff'
+    };
+    joystickMove = nipplejs.create(optionsLeft);
+    joystickMove.on('move', (evt, data) => {
+        const force = Math.min(data.force, 1);
+        mobileControls.moveX = Math.cos(data.angle.radians) * force;
+        mobileControls.moveY = Math.sin(data.angle.radians) * force;
+    });
+    joystickMove.on('end', () => {
+        mobileControls.moveX = 0;
+        mobileControls.moveY = 0;
+    });
+
+    const optionsRight = {
+        zone: document.getElementById('joystick-right'),
+        mode: 'static',
+        position: { left: '50%', top: '50%' },
+        color: '#ff3e3e'
+    };
+    joystickShoot = nipplejs.create(optionsRight);
+    joystickShoot.on('move', (evt, data) => {
+        mobileControls.shootActive = true;
+        mobileControls.shootRotation = data.angle.radians;
+        localPlayer.rotation = data.angle.radians;
+    });
+    joystickShoot.on('end', () => {
+        mobileControls.shootActive = false;
+    });
+}
+
 window.addEventListener('keydown', e => keys[e.code] = true);
 window.addEventListener('keyup', e => keys[e.code] = false);
+
 window.addEventListener('mousemove', e => {
-    if (!gameStarted) return;
+    if (!gameStarted || isTouchDevice) return;
     const dx = e.clientX - canvas.width / 2;
     const dy = e.clientY - canvas.height / 2;
     localPlayer.rotation = Math.atan2(dy, dx);
 });
 
 window.addEventListener('mousedown', () => {
-    if (!gameStarted) return;
+    if (!gameStarted || isTouchDevice) return;
     mouseDown = true;
 });
 
@@ -62,6 +111,7 @@ startButton.addEventListener('click', () => {
         overlay.style.display = 'none';
         ui.style.display = 'flex';
         gameStarted = true;
+        initJoysticks();
     }
 });
 
@@ -74,9 +124,11 @@ usernameInput.addEventListener('keypress', (e) => {
 socket.on('init', (data) => {
     myId = data.id;
     players = data.players;
-    arenaSize = data.arenaSize || 2000;
-    localPlayer.x = players[myId].x;
-    localPlayer.y = players[myId].y;
+    arenaSize = data.arenaSize || 20000;
+    if (players[myId]) {
+        localPlayer.x = players[myId].x;
+        localPlayer.y = players[myId].y;
+    }
 });
 
 socket.on('state', (data) => {
@@ -137,25 +189,30 @@ function update() {
     let moveX = 0;
     let moveY = 0;
 
-    if (keys['KeyW']) {
-        moveX += Math.cos(localPlayer.rotation);
-        moveY += Math.sin(localPlayer.rotation);
-    }
-    if (keys['KeyS']) {
-        moveX -= Math.cos(localPlayer.rotation);
-        moveY -= Math.sin(localPlayer.rotation);
-    }
-    if (keys['KeyA']) {
-        moveX += Math.cos(localPlayer.rotation - Math.PI / 2);
-        moveY += Math.sin(localPlayer.rotation - Math.PI / 2);
-    }
-    if (keys['KeyD']) {
-        moveX += Math.cos(localPlayer.rotation + Math.PI / 2);
-        moveY += Math.sin(localPlayer.rotation + Math.PI / 2);
+    if (isTouchDevice) {
+        moveX = mobileControls.moveX;
+        moveY = mobileControls.moveY;
+    } else {
+        if (keys['KeyW']) {
+            moveX += Math.cos(localPlayer.rotation);
+            moveY += Math.sin(localPlayer.rotation);
+        }
+        if (keys['KeyS']) {
+            moveX -= Math.cos(localPlayer.rotation);
+            moveY -= Math.sin(localPlayer.rotation);
+        }
+        if (keys['KeyA']) {
+            moveX += Math.cos(localPlayer.rotation - Math.PI / 2);
+            moveY += Math.sin(localPlayer.rotation - Math.PI / 2);
+        }
+        if (keys['KeyD']) {
+            moveX += Math.cos(localPlayer.rotation + Math.PI / 2);
+            moveY += Math.sin(localPlayer.rotation + Math.PI / 2);
+        }
     }
 
     if (moveX !== 0 || moveY !== 0) {
-        const mag = Math.hypot(moveX, moveY);
+        const mag = isTouchDevice ? 1 : Math.hypot(moveX, moveY);
         localPlayer.x += (moveX / mag) * localPlayer.speed;
         localPlayer.y += (moveY / mag) * localPlayer.speed;
     }
@@ -170,7 +227,8 @@ function update() {
         rotation: localPlayer.rotation
     });
 
-    if (mouseDown || keys['Space']) {
+    const isShooting = mobileControls.shootActive || mouseDown || keys['Space'];
+    if (isShooting) {
         socket.emit('shoot', {
             x: localPlayer.x,
             y: localPlayer.y,
@@ -374,8 +432,8 @@ function draw() {
 }
 
 function drawMinimap() {
-    const size = 150;
-    const padding = 20;
+    const size = 100;
+    const padding = 10;
     const x = canvas.width - size - padding;
     const y = canvas.height - size - padding;
     const scale = size / arenaSize;
@@ -395,7 +453,7 @@ function drawMinimap() {
         const px = x + pu.x * scale;
         const py = y + pu.y * scale;
         ctx.beginPath();
-        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+        ctx.arc(px, py, 1, 0, Math.PI * 2);
         ctx.fill();
     });
 
@@ -410,13 +468,13 @@ function drawMinimap() {
             ctx.shadowBlur = 5;
             ctx.shadowColor = p.color;
             ctx.beginPath();
-            ctx.arc(px, py, 4, 0, Math.PI * 2);
+            ctx.arc(px, py, 3, 0, Math.PI * 2);
             ctx.fill();
             ctx.shadowBlur = 0;
         } else {
             ctx.fillStyle = 'white';
             ctx.beginPath();
-            ctx.arc(px, py, 3, 0, Math.PI * 2);
+            ctx.arc(px, py, 2, 0, Math.PI * 2);
             ctx.fill();
         }
     }

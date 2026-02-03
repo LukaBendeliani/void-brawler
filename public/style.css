@@ -228,3 +228,49 @@ h1 {
 #start-button:active {
     transform: translateY(0);
 }
+
+/* Mobile Controls */
+#joystick-left, #joystick-right {
+    position: fixed;
+    bottom: 40px;
+    width: 120px;
+    height: 120px;
+    z-index: 100;
+    pointer-events: auto;
+    display: none; /* Hidden by default, shown via JS on touch devices */
+}
+
+#joystick-left { left: 30px; }
+#joystick-right { right: 30px; }
+
+@media (max-width: 768px) {
+    #stats-panel {
+        width: 150px;
+        padding: 10px;
+    }
+    
+    h1 {
+        font-size: 1rem;
+    }
+
+    #login-box {
+        width: 90%;
+        padding: 20px;
+    }
+
+    #leaderboard {
+        top: auto;
+        bottom: 180px;
+        right: 20px;
+        width: 150px;
+        padding: 10px;
+    }
+
+    #instructions {
+        display: none;
+    }
+
+    #joystick-left, #joystick-right {
+        display: block;
+    }
+}
