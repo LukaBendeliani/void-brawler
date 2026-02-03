@@ -23,7 +23,7 @@ let localPlayer = {
     x: 0,
     y: 0,
     rotation: 0,
-    speed: 5.0
+    speed: 4.0
 };
 
 const keys = {};
@@ -144,7 +144,7 @@ socket.on('state', (data) => {
 
         // Update Stats UI
         if (statElements.damage) statElements.damage.innerText = (p.stats.damage / 10).toFixed(1);
-        if (statElements.speed) statElements.speed.innerText = (p.stats.speed / 5.0).toFixed(1);
+        if (statElements.speed) statElements.speed.innerText = (p.stats.speed / 4.0).toFixed(1);
         if (statElements.defense) statElements.defense.innerText = (1 / p.stats.defense).toFixed(1);
         if (statElements.attackSpeed) statElements.attackSpeed.innerText = p.stats.attackSpeed.toFixed(1);
         if (statElements.health) statElements.health.innerText = Math.ceil(p.health);
@@ -155,7 +155,7 @@ socket.on('state', (data) => {
 
         // Sync position if killed or significant desync
         const dist = Math.hypot(p.x - localPlayer.x, p.y - localPlayer.y);
-        if (dist > 300) {
+        if (dist > 300 && initialized) {
             localPlayer.x = p.x;
             localPlayer.y = p.y;
         }
@@ -192,8 +192,8 @@ function update() {
     let moveY = 0;
 
     if (isTouchDevice) {
-        moveX = mobileControls.moveX;
-        moveY = mobileControls.moveY;
+        moveX = mobileControls.moveX || 0;
+        moveY = mobileControls.moveY || 0;
     } else {
         if (keys['KeyW']) moveY -= 1;
         if (keys['KeyS']) moveY += 1;
@@ -203,8 +203,16 @@ function update() {
 
     if (moveX !== 0 || moveY !== 0) {
         const mag = isTouchDevice ? 1 : Math.hypot(moveX, moveY);
-        localPlayer.x += (moveX / mag) * localPlayer.speed;
-        localPlayer.y += (moveY / mag) * localPlayer.speed;
+        
+        // Ensure values are valid before applying
+        const moveDist = (isTouchDevice ? 1 : 1); // Normalize
+        const dx = (moveX / mag) * localPlayer.speed;
+        const dy = (moveY / mag) * localPlayer.speed;
+
+        if (!isNaN(dx) && !isNaN(dy) && initialized) {
+            localPlayer.x += dx;
+            localPlayer.y += dy;
+        }
     }
 
     // Local clamping
@@ -290,6 +298,16 @@ function draw() {
         return;
     }
 
+    // Dynamic FOV: Scale based on player size
+    const playerSize = players[myId].stats.size || 1;
+    const viewScale = 1 / playerSize;
+
+    ctx.save();
+    // Apply zoom centered on the screen
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(viewScale, viewScale);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
     const camX = Math.round(localPlayer.x - canvas.width / 2);
     const camY = Math.round(localPlayer.y - canvas.height / 2);
 
@@ -349,8 +367,9 @@ function draw() {
         const screenX = Math.round(drawX - camX);
         const screenY = Math.round(drawY - camY);
 
-        // Skip if off screen
-        if (screenX < -100 || screenX > canvas.width + 100 || screenY < -100 || screenY > canvas.height + 100) continue;
+        // Skip if off screen (accounting for potential zoom)
+        const margin = 100 * playerSize;
+        if (screenX < -margin || screenX > canvas.width + margin || screenY < -margin || screenY > canvas.height + margin) continue;
 
         // Draw Aura for special collectibles
         if (p.specialCollectibles && p.specialCollectibles.length > 0) {
@@ -421,6 +440,8 @@ function draw() {
         ctx.fillStyle = '#ff3e3e';
         ctx.fillRect(screenX - 20, screenY - 20, Math.round((p.health / p.stats.maxHealth) * 40), 5);
     }
+
+    ctx.restore(); // End Dynamic FOV scale
 
     drawMinimap();
 
