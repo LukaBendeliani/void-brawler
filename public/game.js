@@ -22,7 +22,7 @@ let localPlayer = {
     x: 0,
     y: 0,
     rotation: 0,
-    speed: 5.0
+    speed: 10.0
 };
 
 const keys = {};
@@ -90,7 +90,7 @@ socket.on('state', (data) => {
 
         // Update Stats UI
         if (statElements.damage) statElements.damage.innerText = (p.stats.damage / 10).toFixed(1);
-        if (statElements.speed) statElements.speed.innerText = (p.stats.speed / 5.0).toFixed(1);
+        if (statElements.speed) statElements.speed.innerText = (p.stats.speed / 10.0).toFixed(1);
         if (statElements.defense) statElements.defense.innerText = (1 / p.stats.defense).toFixed(1);
         if (statElements.attackSpeed) statElements.attackSpeed.innerText = p.stats.attackSpeed.toFixed(1);
         if (statElements.health) statElements.health.innerText = Math.ceil(p.health);
@@ -170,7 +170,7 @@ function update() {
         rotation: localPlayer.rotation
     });
 
-    if (mouseDown) {
+    if (mouseDown || keys['Space']) {
         socket.emit('shoot', {
             x: localPlayer.x,
             y: localPlayer.y,
@@ -180,7 +180,7 @@ function update() {
 }
 
 function drawGrid(offsetX, offsetY) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
     ctx.lineWidth = 1;
     const gridSize = 50;
 
