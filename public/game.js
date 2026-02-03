@@ -225,41 +225,58 @@ function update() {
     }
 }
 
-function drawGrid(offsetX, offsetY) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = 1;
+let gridPattern = null;
+
+function createGridPattern() {
     const gridSize = 50;
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = gridSize;
+    offCanvas.height = gridSize;
+    const offCtx = offCanvas.getContext('2d');
 
-    // Only draw grid within arena bounds
-    const startX = Math.max(0, Math.floor(offsetX / gridSize) * gridSize);
-    const endX = Math.min(arenaSize, Math.ceil((offsetX + canvas.width) / gridSize) * gridSize);
-    const startY = Math.max(0, Math.floor(offsetY / gridSize) * gridSize);
-    const endY = Math.min(arenaSize, Math.ceil((offsetY + canvas.height) / gridSize) * gridSize);
+    offCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    offCtx.lineWidth = 1;
+    offCtx.beginPath();
+    offCtx.moveTo(0, 0);
+    offCtx.lineTo(gridSize, 0);
+    offCtx.moveTo(0, 0);
+    offCtx.lineTo(0, gridSize);
+    offCtx.stroke();
 
-    for (let x = startX; x <= endX; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x - offsetX, 0 - offsetY);
-        ctx.lineTo(x - offsetX, arenaSize - offsetY);
-        ctx.stroke();
-    }
-    for (let y = startY; y <= endY; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0 - offsetX, y - offsetY);
-        ctx.lineTo(arenaSize - offsetX, y - offsetY);
-        ctx.stroke();
-    }
+    offCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    offCtx.beginPath();
+    offCtx.arc(0, 0, 1.5, 0, Math.PI * 2);
+    offCtx.fill();
+
+    gridPattern = ctx.createPattern(offCanvas, 'repeat');
+}
+
+function drawGrid(offsetX, offsetY) {
+    if (!gridPattern) createGridPattern();
+
+    const gridSize = 50;
+    
+    // Calculate the visible portion of the arena in screen coordinates
+    const fillX = Math.max(0, -offsetX);
+    const fillY = Math.max(0, -offsetY);
+    const fillW = Math.min(canvas.width, arenaSize - offsetX) - fillX;
+    const fillH = Math.min(canvas.height, arenaSize - offsetY) - fillY;
+    
+    if (fillW <= 0 || fillH <= 0) return;
+
+    ctx.save();
+    const m = new DOMMatrix();
+    m.translateSelf(-offsetX, -offsetY);
+    gridPattern.setTransform(m);
+    ctx.fillStyle = gridPattern;
+    ctx.fillRect(fillX, fillY, fillW, fillH);
+    ctx.restore();
 }
 
 function drawBoundary(offsetX, offsetY) {
     ctx.strokeStyle = '#ff3e3e';
     ctx.lineWidth = 5;
-    ctx.strokeRect(0 - offsetX, 0 - offsetY, arenaSize, arenaSize);
-
-    // Optional: Draw a slight glow for the boundary
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = '#ff3e3e';
-    ctx.strokeRect(0 - offsetX, 0 - offsetY, arenaSize, arenaSize);
-    ctx.shadowBlur = 0;
+    ctx.strokeRect(Math.round(0 - offsetX), Math.round(0 - offsetY), arenaSize, arenaSize);
 }
 
 function draw() {
@@ -280,45 +297,41 @@ function draw() {
     // Draw power-ups
     powerups.forEach(pu => {
         ctx.fillStyle = pu.color;
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = pu.color;
 
         // Floating effect
-        const bob = Math.sin(Date.now() / 200) * 5;
+        const bob = Math.round(Math.sin(Date.now() / 200) * 5);
+        const drawX = Math.round(pu.x - camX);
+        const drawY = Math.round(pu.y - camY + bob);
 
         if (pu.isSpecial) {
             // Render as glowing circle
             ctx.beginPath();
-            ctx.arc(pu.x - camX, pu.y - camY + bob, 15, 0, Math.PI * 2);
+            ctx.arc(drawX, drawY, 15, 0, Math.PI * 2);
             ctx.fill();
 
             // Outer ring
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(pu.x - camX, pu.y - camY + bob, 18, 0, Math.PI * 2);
+            ctx.arc(drawX, drawY, 18, 0, Math.PI * 2);
             ctx.stroke();
         } else {
-            ctx.fillRect(pu.x - camX - 10, pu.y - camY - 10 + bob, 20, 20);
+            ctx.fillRect(drawX - 10, drawY - 10, 20, 20);
         }
 
         // Label
-        ctx.shadowBlur = 0;
         ctx.fillStyle = 'white';
         ctx.font = 'bold 10px Outfit';
         ctx.textAlign = 'center';
-        ctx.fillText(pu.type, pu.x - camX, pu.y - camY - 20 + bob);
+        ctx.fillText(pu.type, drawX, drawY - 20);
     });
 
     // Draw projectiles
     projectiles.forEach(p => {
         ctx.fillStyle = p.color;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = p.color;
         ctx.beginPath();
-        ctx.arc(p.x - camX, p.y - camY, 4, 0, Math.PI * 2);
+        ctx.arc(Math.round(p.x - camX), Math.round(p.y - camY), 4, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
     });
 
     // Draw players
@@ -331,8 +344,8 @@ function draw() {
         const drawY = isSelf ? localPlayer.y : p.y;
         const drawRot = isSelf ? localPlayer.rotation : p.rotation;
 
-        const screenX = drawX - camX;
-        const screenY = drawY - camY;
+        const screenX = Math.round(drawX - camX);
+        const screenY = Math.round(drawY - camY);
 
         // Skip if off screen
         if (screenX < -100 || screenX > canvas.width + 100 || screenY < -100 || screenY > canvas.height + 100) continue;
@@ -353,21 +366,17 @@ function draw() {
                 // God Mode Rainbow Aura
                 ctx.strokeStyle = `hsl(${Date.now() / 10 % 360}, 100%, 50%)`;
                 ctx.lineWidth = 4;
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = ctx.strokeStyle;
                 ctx.beginPath();
-                ctx.arc(0, 0, 40 + Math.sin(Date.now() / 100) * 5, 0, Math.PI * 2);
+                ctx.arc(0, 0, Math.round(40 + Math.sin(Date.now() / 100) * 5), 0, Math.PI * 2);
                 ctx.stroke();
             } else {
                 p.specialCollectibles.forEach((scId, index) => {
                     const color = colors[scId] || '#ffffff';
                     ctx.strokeStyle = color;
                     ctx.lineWidth = 2;
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = color;
 
                     ctx.beginPath();
-                    const radius = 25 + (index * 6) + Math.sin(Date.now() / 200 + index) * 3;
+                    const radius = Math.round(25 + (index * 6) + Math.sin(Date.now() / 200 + index) * 3);
                     ctx.arc(0, 0, radius, 0, Math.PI * 2);
                     ctx.stroke();
                 });
@@ -381,19 +390,17 @@ function draw() {
 
         // Player Body
         ctx.fillStyle = p.color;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = p.color;
 
         // Square ship shape
-        const s = 12 * p.stats.size;
+        const s = Math.round(12 * p.stats.size);
         ctx.fillRect(-s, -s, s * 2, s * 2);
 
         // Direction indicator
         ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         ctx.beginPath();
         ctx.moveTo(s, 0);
-        ctx.lineTo(s / 2, -s / 3);
-        ctx.lineTo(s / 2, s / 3);
+        ctx.lineTo(Math.round(s / 2), Math.round(-s / 3));
+        ctx.lineTo(Math.round(s / 2), Math.round(s / 3));
         ctx.closePath();
         ctx.fill();
 
@@ -410,7 +417,7 @@ function draw() {
         ctx.fillRect(screenX - 20, screenY - 20, 40, 5);
         // Health bar fill
         ctx.fillStyle = '#ff3e3e';
-        ctx.fillRect(screenX - 20, screenY - 20, (p.health / p.stats.maxHealth) * 40, 5);
+        ctx.fillRect(screenX - 20, screenY - 20, Math.round((p.health / p.stats.maxHealth) * 40), 5);
     }
 
     drawMinimap();
@@ -422,8 +429,8 @@ function draw() {
 function drawMinimap() {
     const size = 100;
     const padding = 10;
-    const x = canvas.width - size - padding;
-    const y = canvas.height - size - padding;
+    const x = Math.round(canvas.width - size - padding);
+    const y = Math.round(canvas.height - size - padding);
     const scale = size / arenaSize;
 
     // Background
@@ -438,8 +445,8 @@ function drawMinimap() {
     // Draw Power-ups (Small dots)
     powerups.forEach(pu => {
         ctx.fillStyle = pu.color;
-        const px = x + pu.x * scale;
-        const py = y + pu.y * scale;
+        const px = Math.round(x + pu.x * scale);
+        const py = Math.round(y + pu.y * scale);
         ctx.beginPath();
         ctx.arc(px, py, 1, 0, Math.PI * 2);
         ctx.fill();
@@ -448,17 +455,14 @@ function drawMinimap() {
     // Draw Players
     for (const id in players) {
         const p = players[id];
-        const px = x + p.x * scale;
-        const py = y + p.y * scale;
+        const px = Math.round(x + p.x * scale);
+        const py = Math.round(y + p.y * scale);
 
         if (id === myId) {
             ctx.fillStyle = p.color;
-            ctx.shadowBlur = 5;
-            ctx.shadowColor = p.color;
             ctx.beginPath();
             ctx.arc(px, py, 3, 0, Math.PI * 2);
             ctx.fill();
-            ctx.shadowBlur = 0;
         } else {
             ctx.fillStyle = 'white';
             ctx.beginPath();

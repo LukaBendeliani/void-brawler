@@ -98,7 +98,7 @@ io.on('connection', (socket) => {
                         vx: Math.cos(angle) * 20,
                         vy: Math.sin(angle) * 20,
                         color: player.color,
-                        life: 100,
+                        life: 60,
                         damage: player.stats.damage
                     });
                 });
