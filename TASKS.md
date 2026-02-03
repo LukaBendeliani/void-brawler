@@ -1,0 +1,27 @@
+# Void Brawler Overhaul Tasks
+
+- [x] **Task 1: Infrastructure & UI**
+    - [x] Username entry overlay.
+    - [x] Square ship shape.
+    - [x] Finite map boundaries (2000x2000) & clamping.
+    - [x] Basic Stats Panel UI (Health, Damage, Speed, Defense, Attack Speed, Size).
+- [x] **Task 2: Stats & Temporary Power-ups**
+    - [x] Server-side stats tracking.
+    - [x] Temp power-up spawning (Speed, AS, Dmg, Def, Health).
+    - [x] Expiration timers.
+    - [x] UI sync for stats.
+- [x] **Task 3: Collectibles & Special Effects**
+    - [x] Purple, Green, Red, Blue circles.
+    - [x] Persistence until death.
+    - [x] "God Mode" (holding all 4).
+    - [x] Multi-directional bullets (Purple).
+- [ ] **Task 4: Progression & Minimap**
+    - [ ] Purple, Green, Red, Blue circles.
+    - [ ] Persistence until death.
+    - [ ] "God Mode" (holding all 4).
+    - [ ] Multi-directional bullets (Purple).
+- [ ] **Task 4: Progression & Minimap**
+    - [ ] Size increase on kill.
+    - [ ] Leaderboard (sorted by size).
+    - [ ] Minimap implementation.
+    - [ ] Respawn random location.

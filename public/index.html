@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Void Brawler | Multi-Player Arena</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="overlay">
+        <div id="login-box">
+            <h1>VOID BRAWLER</h1>
+            <p>Enter your callsign to enter the void</p>
+            <input type="text" id="username-input" placeholder="USERNAME" maxlength="15">
+            <button id="start-button">JOIN GAME</button>
+        </div>
+    </div>
+
+    <div id="ui" style="display: none;">
+        <div id="status">
+            <h1>VOID BRAWLER</h1>
+            <div id="player-stats">
+                Health: <span id="health">100</span>%
+            </div>
+        </div>
+        <div id="stats-panel">
+            <div class="stat-item">
+                <span class="stat-label">Damage</span>
+                <span id="stat-damage" class="stat-value">1.0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Speed</span>
+                <span id="stat-speed" class="stat-value">1.0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Defense</span>
+                <span id="stat-defense" class="stat-value">1.0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Atk Speed</span>
+                <span id="stat-attackSpeed" class="stat-value">1.0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Health</span>
+                <span id="stat-health" class="stat-value">100</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Size</span>
+                <span id="stat-size" class="stat-value">1.0</span>
+            </div>
+        </div>
+        <div id="instructions">
+            WASD to Move | Mouse to Aim | Click to Shoot
+        </div>
+        <div id="leaderboard">
+            <h3>LEADERBOARD</h3>
+            <div id="leaderboard-list">
+                <!-- Sorted players will be inserted here -->
+            </div>
+        </div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
