@@ -15,7 +15,7 @@ let myId = null;
 let players = {};
 let projectiles = [];
 let powerups = [];
-let arenaSize = 20000;
+let arenaSize = 16000;
 let gameStarted = false;
 let initialized = false;
 
@@ -47,13 +47,19 @@ const statElements = {
 };
 
 // Check for touch support
-const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
 
 function initJoysticks() {
     if (!isTouchDevice) return;
 
+    // Ensure joysticks are visible on mobile
+    const leftJ = document.getElementById('joystick-left');
+    const rightJ = document.getElementById('joystick-right');
+    if (leftJ) leftJ.style.display = 'block';
+    if (rightJ) rightJ.style.display = 'block';
+
     const optionsLeft = {
-        zone: document.getElementById('joystick-left'),
+        zone: leftJ,
         mode: 'static',
         position: { left: '50%', top: '50%' },
         color: '#00f2ff'
@@ -70,7 +76,7 @@ function initJoysticks() {
     });
 
     const optionsRight = {
-        zone: document.getElementById('joystick-right'),
+        zone: rightJ,
         mode: 'static',
         position: { left: '50%', top: '50%' },
         color: '#ff3e3e'
@@ -125,7 +131,7 @@ usernameInput.addEventListener('keypress', (e) => {
 socket.on('init', (data) => {
     myId = data.id;
     players = data.players;
-    arenaSize = data.arenaSize || 20000;
+    arenaSize = data.arenaSize || 16000;
     if (players[myId]) {
         localPlayer.x = players[myId].x;
         localPlayer.y = players[myId].y;
@@ -191,23 +197,23 @@ function update() {
     let moveX = 0;
     let moveY = 0;
 
+    // Support both Keyboard and Touch simultaneously
+    if (keys['KeyW']) moveY -= 1;
+    if (keys['KeyS']) moveY += 1;
+    if (keys['KeyA']) moveX -= 1;
+    if (keys['KeyD']) moveX += 1;
+
     if (isTouchDevice) {
-        moveX = mobileControls.moveX || 0;
-        moveY = mobileControls.moveY || 0;
-    } else {
-        if (keys['KeyW']) moveY -= 1;
-        if (keys['KeyS']) moveY += 1;
-        if (keys['KeyA']) moveX -= 1;
-        if (keys['KeyD']) moveX += 1;
+        moveX += mobileControls.moveX || 0;
+        moveY += mobileControls.moveY || 0;
     }
 
     if (moveX !== 0 || moveY !== 0) {
-        const mag = isTouchDevice ? 1 : Math.hypot(moveX, moveY);
-        
-        // Ensure values are valid before applying
-        const moveDist = (isTouchDevice ? 1 : 1); // Normalize
-        const dx = (moveX / mag) * localPlayer.speed;
-        const dy = (moveY / mag) * localPlayer.speed;
+        const mag = Math.hypot(moveX, moveY);
+        // Normalize and scale by speed (cap magnitude at 1.0)
+        const normMag = Math.min(mag, 1.0);
+        const dx = (moveX / mag) * normMag * localPlayer.speed;
+        const dy = (moveY / mag) * normMag * localPlayer.speed;
 
         if (!isNaN(dx) && !isNaN(dy) && initialized) {
             localPlayer.x += dx;
@@ -261,32 +267,21 @@ function createGridPattern() {
     gridPattern = ctx.createPattern(offCanvas, 'repeat');
 }
 
-function drawGrid(offsetX, offsetY) {
+function drawGrid() {
     if (!gridPattern) createGridPattern();
 
-    const gridSize = 50;
-    
-    // Calculate the visible portion of the arena in screen coordinates
-    const fillX = Math.max(0, -offsetX);
-    const fillY = Math.max(0, -offsetY);
-    const fillW = Math.min(canvas.width, arenaSize - offsetX) - fillX;
-    const fillH = Math.min(canvas.height, arenaSize - offsetY) - fillY;
-    
-    if (fillW <= 0 || fillH <= 0) return;
-
     ctx.save();
-    const m = new DOMMatrix();
-    m.translateSelf(-offsetX, -offsetY);
-    gridPattern.setTransform(m);
+    // Use an identity transform for the pattern so it aligns with world coordinates
+    gridPattern.setTransform(new DOMMatrix());
     ctx.fillStyle = gridPattern;
-    ctx.fillRect(fillX, fillY, fillW, fillH);
+    ctx.fillRect(0, 0, arenaSize, arenaSize);
     ctx.restore();
 }
 
-function drawBoundary(offsetX, offsetY) {
+function drawBoundary() {
     ctx.strokeStyle = '#ff3e3e';
     ctx.lineWidth = 5;
-    ctx.strokeRect(Math.round(0 - offsetX), Math.round(0 - offsetY), arenaSize, arenaSize);
+    ctx.strokeRect(0, 0, arenaSize, arenaSize);
 }
 
 function draw() {
@@ -303,16 +298,20 @@ function draw() {
     const viewScale = 1 / playerSize;
 
     ctx.save();
-    // Apply zoom centered on the screen
+    // 1. Center zoom on screen
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.scale(viewScale, viewScale);
     ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
-    const camX = Math.round(localPlayer.x - canvas.width / 2);
-    const camY = Math.round(localPlayer.y - canvas.height / 2);
+    // 2. Camera follow (camX/Y is the world coord of top-left of viewport)
+    const camX = localPlayer.x - (canvas.width / viewScale) / 2;
+    const camY = localPlayer.y - (canvas.height / viewScale) / 2;
+    
+    // 3. Shift into World Coordinates
+    ctx.translate(-camX, -camY);
 
-    drawGrid(camX, camY);
-    drawBoundary(camX, camY);
+    drawGrid();
+    drawBoundary();
 
     // Draw power-ups
     powerups.forEach(pu => {
@@ -320,8 +319,8 @@ function draw() {
 
         // Floating effect
         const bob = Math.round(Math.sin(Date.now() / 200) * 5);
-        const drawX = Math.round(pu.x - camX);
-        const drawY = Math.round(pu.y - camY + bob);
+        const drawX = pu.x;
+        const drawY = pu.y + bob;
 
         if (pu.isSpecial) {
             // Render as glowing circle
@@ -350,7 +349,7 @@ function draw() {
     projectiles.forEach(p => {
         ctx.fillStyle = p.color;
         ctx.beginPath();
-        ctx.arc(Math.round(p.x - camX), Math.round(p.y - camY), 4, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
         ctx.fill();
     });
 
@@ -364,17 +363,10 @@ function draw() {
         const drawY = isSelf ? localPlayer.y : p.y;
         const drawRot = isSelf ? localPlayer.rotation : p.rotation;
 
-        const screenX = Math.round(drawX - camX);
-        const screenY = Math.round(drawY - camY);
-
-        // Skip if off screen (accounting for potential zoom)
-        const margin = 100 * playerSize;
-        if (screenX < -margin || screenX > canvas.width + margin || screenY < -margin || screenY > canvas.height + margin) continue;
-
         // Draw Aura for special collectibles
         if (p.specialCollectibles && p.specialCollectibles.length > 0) {
             ctx.save();
-            ctx.translate(screenX, screenY);
+            ctx.translate(drawX, drawY);
 
             const colors = {
                 PURPLE: '#a020f0',
@@ -406,7 +398,7 @@ function draw() {
         }
 
         ctx.save();
-        ctx.translate(screenX, screenY);
+        ctx.translate(drawX, drawY);
         ctx.rotate(drawRot);
 
         // Player Body
@@ -431,17 +423,17 @@ function draw() {
         ctx.fillStyle = 'white';
         ctx.font = 'bold 12px Outfit';
         ctx.textAlign = 'center';
-        ctx.fillText(p.name, screenX, screenY - 25);
+        ctx.fillText(p.name, drawX, drawY - 25);
 
         // Health bar background
         ctx.fillStyle = 'rgba(255,255,255,0.1)';
-        ctx.fillRect(screenX - 20, screenY - 20, 40, 5);
+        ctx.fillRect(drawX - 20, drawY - 20, 40, 5);
         // Health bar fill
         ctx.fillStyle = '#ff3e3e';
-        ctx.fillRect(screenX - 20, screenY - 20, Math.round((p.health / p.stats.maxHealth) * 40), 5);
+        ctx.fillRect(drawX - 20, drawY - 20, Math.round((p.health / p.stats.maxHealth) * 40), 5);
     }
 
-    ctx.restore(); // End Dynamic FOV scale
+    ctx.restore(); // End Dynamic FOV scale and World Coordinate shift
 
     drawMinimap();
 

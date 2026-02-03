@@ -12,7 +12,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const players = {};
 let projectiles = [];
 let powerups = [];
-const ARENA_SIZE = 10000;
+const ARENA_SIZE = 16000;
 const MAX_POWERUPS = 50; // Increased to match map size
 
 const POWERUP_TYPES = {
@@ -187,7 +187,7 @@ setInterval(() => {
         // Apply temporary active effects
         player.activeEffects = player.activeEffects.filter(effect => effect.expiry > now);
         player.activeEffects.forEach(effect => {
-            if (effect.type === 'SPEED') player.stats.speed *= 1.5;
+            if (effect.type === 'SPEED') player.stats.speed *= 1.25;
             if (effect.type === 'ATTACK_SPEED') player.stats.attackSpeed *= 1.5;
             if (effect.type === 'DAMAGE') player.stats.damage *= 1.5;
             if (effect.type === 'DEFENSE') player.stats.defense *= 0.5;
@@ -235,7 +235,7 @@ setInterval(() => {
         for (let i = powerups.length - 1; i >= 0; i--) {
             const pu = powerups[i];
             const dist = Math.hypot(player.x - pu.x, player.y - pu.y);
-            if (dist < 30) {
+            if (dist < 30 * player.stats.size) {
                 if (pu.isSpecial) {
                     if (!player.specialCollectibles.includes(pu.type)) {
                         player.specialCollectibles.push(pu.type);
